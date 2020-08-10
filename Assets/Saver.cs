@@ -4,15 +4,19 @@ using UnityEngine;
 
 public class Saver : MonoBehaviour
 {
-    public PlayerMovement pm;
-    public FPSCamera cam;
-    public Animator anim;
+    PlayerMovement pm;
+    FPSCamera cam;
+    Animator anim;
     CanvasGroup fg;
     public List<GameObject> saveables;
     // Start is called before the first frame update
     void Start()
     {
+        pm = GameObject.Find("Player").GetComponent<PlayerMovement>();
+        cam = GameObject.Find("fpcam").GetComponent<FPSCamera>();
+        Animator anim = GameObject.Find("saveanim").GetComponent<Animator>();
         fg = GameObject.Find("ForegroundUI").GetComponent<CanvasGroup>();
+        pm.gameObject.transform.parent.gameObject.BroadcastMessage("load");
         foreach (GameObject g in saveables)
         {
             g.BroadcastMessage("load");
@@ -28,6 +32,7 @@ public class Saver : MonoBehaviour
     {
         
         StartCoroutine(saver());
+        pm.gameObject.transform.parent.gameObject.BroadcastMessage("save");
         foreach (GameObject g in saveables)
         {
             g.BroadcastMessage("save");

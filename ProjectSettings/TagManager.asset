@@ -15,6 +15,13 @@ TagManager:
   - remote
   - cave
   - cTrigger
+  - receptacle
+  - door
+  - katana
+  - button
+  - hb_attack
+  - harm
+  - explosion
   layers:
   - Default
   - TransparentFX
@@ -31,7 +38,7 @@ TagManager:
   - collect
   - save
   - read
-  - 
+  - lat
   - 
   - 
   - 

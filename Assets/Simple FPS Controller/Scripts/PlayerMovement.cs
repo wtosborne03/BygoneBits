@@ -24,6 +24,9 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Playables;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
+using System.Xml.Linq;
+using UnityEngine.UI;
 
 // I use Physics.gravity a lot instead of Vector3.up because you can point the gravity to a different direction and i want the controller to work fine
 [RequireComponent(typeof(Rigidbody))]
@@ -34,6 +37,7 @@ public class PlayerMovement : MonoBehaviour
     private Rigidbody rb;
     private CapsuleCollider cc;
     public GrapplingHook grap;
+    public CanvasGroup katanscreen;
     public CanvasGroup remoteSreen;
     public CanvasGroup grapScreen;
     public screener sc;
@@ -43,7 +47,7 @@ public class PlayerMovement : MonoBehaviour
     public GrabIt git;
     public FPSCamera camscript;
     CanvasGroup fg;
-    public Transform spawnpos;
+    Transform spawnpos;
 
     [Header("Movement properties")]
     public float walkSpeed = 8.0f;
@@ -54,6 +58,7 @@ public class PlayerMovement : MonoBehaviour
     [HideInInspector] public float vInput, hInput;
     public Transform groundChecker;
     public GameObject grapplehook;
+    public GameObject katana;
     public AudioClip ability;
     [Header("Jump")]
     public float jumpForce = 500.0f;
@@ -63,15 +68,46 @@ public class PlayerMovement : MonoBehaviour
     private Vector2 move;
     private bool sprint = false;
     private PlayerInput pin;
-    
+    public int spawn;
+    public Animator hurt;
+    public AudioClip hurtsound;
+    public float health = 1.0f;
+    public Image healthim;
+    public float fillspeed;
+    private float hurtstamp;
+    public AudioSource footsteps;
+    public float explospeed = 100;
+    public AudioClip[] steps;
+    float steptime;
+    AsyncOperation levelload;
+    private int stepcount = 0;
     private void Start()
     {
         fg = GameObject.Find("ForegroundUI").GetComponent<CanvasGroup>();
         saudio = GetComponent<AudioSource>();
-        transform.position = spawnpos.position;
+        
         rb = this.GetComponent<Rigidbody>();
         cc = this.GetComponent<CapsuleCollider>();
         pin = transform.parent.gameObject.GetComponent<PlayerInput>();
+        if (PlayerPrefs.GetInt("New") == 0)
+        {
+            levelload =
+            SceneManager.LoadSceneAsync(PlayerPrefs.GetInt("level"), LoadSceneMode.Single);
+            
+
+           
+        } else
+        {
+            //change level to the overworld one
+            levelload =
+            SceneManager.LoadSceneAsync(2, LoadSceneMode.Single);
+        }
+        levelload.completed += onLevelLoad;
+    }
+    void onLevelLoad(AsyncOperation a)
+    {
+        fader.SetBool("on", false);
+        load();
     }
     public void OnSprint(InputValue val)
     {
@@ -88,15 +124,37 @@ public class PlayerMovement : MonoBehaviour
     {
         if (PlayerPrefs.GetInt("New") == 0)
         {
-            if (savetool.loadbool(PlayerPrefs.GetInt("grapple"))) enablegrapple();
+            if (PlayerPrefs.GetInt("weapstate") > 0) enablegrapple();
+            if (PlayerPrefs.GetInt("weapstate") > 1) enablesword();
             if (savetool.loadbool(PlayerPrefs.GetInt("remote"))) git.remote = true;
+            spawn = PlayerPrefs.GetInt("spawn");
+            if (PlayerPrefs.GetInt("buildpoint") == 0)
+            {
+                    spawnpos = GameObject.Find("SpawnPos" + spawn.ToString()).transform;
+                    transform.position = spawnpos.position;
+            } else
+            {
+                spawnpos = GameObject.Find("SpawnPos" + PlayerPrefs.GetInt("buildpoint").ToString()).transform;
+                transform.position = spawnpos.position;
+            }
         }
+        else 
+        {
+            spawn = 0;
+            spawnpos = GameObject.Find("SpawnPos" + spawn.ToString()).transform;
+            transform.position = spawnpos.position;
+        }
+        
+        
     }
     public void save()
     {
 
-        PlayerPrefs.SetInt("grapple", savetool.savebool(grap.weapstate > 0));
+        PlayerPrefs.SetInt("weapstate", grap.weapstate);
         PlayerPrefs.SetInt("remote", savetool.savebool(git.remote));
+        PlayerPrefs.SetInt("spawn", spawn);
+        PlayerPrefs.SetInt("level", SceneManager.GetActiveScene().buildIndex);
+        PlayerPrefs.SetInt("buildpoint", 0);
     }
 
     private bool isGrounded = false;
@@ -105,6 +163,8 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 inputForce;
     private void Update()
     {
+        
+        healthim.fillAmount = Mathf.Lerp(healthim.fillAmount, health, Time.deltaTime * fillspeed);
         // Input
         vInput = move.y;
         hInput = move.x;
@@ -127,6 +187,27 @@ public class PlayerMovement : MonoBehaviour
         {
             // Ground controller
             rb.velocity = Vector3.Lerp(rb.velocity, inputForce, changeInStageSpeed * Time.deltaTime);
+            if (Mathf.Abs(vInput) + Mathf.Abs(hInput) > 0.2f)
+            {
+                if (steptime < Time.time)
+                {
+
+                    footsteps.PlayOneShot(steps[stepcount]);
+                    if (sprint)
+                    {
+                        steptime = Time.time + 0.2f;
+                    }
+                    else
+                    {
+                        steptime = Time.time + 0.4f;
+                    }
+                    stepcount++;
+                    if (stepcount > steps.Length - 1)
+                    {
+                        stepcount = 0;
+                    }
+                }
+            }
         }
         else
             // Air control
@@ -178,16 +259,18 @@ public class PlayerMovement : MonoBehaviour
             sc.showScreen(grapScreen, 2.0f);
             saudio.PlayOneShot(ability);
             StartCoroutine(delayaction("enablegrapple", 3));
-        } else if (coll.gameObject.CompareTag("remote") && actionstamp < Time.time)
+        }
+        else if (coll.gameObject.CompareTag("katana") && actionstamp < Time.time)
         {
             actionstamp = Time.time + 5;
             enableMovement = false;
             camscript.lookat(coll.transform, 3.0f);
             coll.gameObject.GetComponent<Animation>().Play();
+            coll.gameObject.GetComponent<actsave>().trigger();
             Destroy(coll.gameObject, 3.0f);
-            sc.showScreen(remoteSreen, 2.0f);
-            git.remote = true;
+            sc.showScreen(katanscreen, 2.0f);
             saudio.PlayOneShot(ability);
+            StartCoroutine(delayaction("enablesword", 3));
         }
         else if (coll.gameObject.CompareTag("cTrigger"))
         {
@@ -196,12 +279,55 @@ public class PlayerMovement : MonoBehaviour
             if (ti != 0) {
                 StartCoroutine(CGFade.FadeOut(fg, 0.2f));
                 enableMovement = false;
+                rb.velocity = Vector3.zero;
                 StartCoroutine(wait(ti));
                     }
            
         }
+        else if (coll.gameObject.CompareTag("door"))
+        {
+
+            StartCoroutine(travel(coll.gameObject.GetComponent<door>().build, coll.gameObject.GetComponent<door>().spawn));
+
+        }
+        if (coll.gameObject.CompareTag("explosion") && hurtstamp + 1f < Time.time)
+        {
+            rb.AddForce((coll.transform.position - transform.position) * explospeed);
+            StartCoroutine(hurteffect(.15f));
+        }
 
 
+    }
+    private void OnCollisionEnter(Collision coll)
+    {
+        if (coll.gameObject.CompareTag("harm") && hurtstamp + 1f < Time.time )
+        {
+            StartCoroutine(hurteffect(.1f));
+        }
+
+
+    }
+    public void startCutscene(GameObject cut)
+    {
+        float ti = cut.GetComponent<cutscene>().play();
+        if (ti != 0)
+        {
+            StartCoroutine(CGFade.FadeOut(fg, 0.2f));
+            enableMovement = false;
+            rb.velocity = Vector3.zero;
+            StartCoroutine(wait(ti));
+        }
+    }
+    IEnumerator travel(int build, int level)
+    {
+        fader.SetBool("on", true);
+        PlayerPrefs.SetInt("buildpoint", level);
+        yield return new WaitForSecondsRealtime(0.5f);
+        
+        levelload =
+            SceneManager.LoadSceneAsync(build, LoadSceneMode.Single);
+        while (!levelload.isDone) yield return null;
+        spawnpos = GameObject.Find("TPos" + level.ToString()).transform;
     }
     IEnumerator wait(float sec)
     {
@@ -214,6 +340,11 @@ public class PlayerMovement : MonoBehaviour
         grapplehook.SetActive(true);
         grap.weapstate = 1;
     }
+    public void enablesword()
+    {
+        katana.SetActive(true);
+        grap.weapstate = 2;
+    }
     IEnumerator delayaction(string action, float delay)
     {
         yield return new WaitForSeconds(delay);
@@ -223,6 +354,14 @@ public class PlayerMovement : MonoBehaviour
     {
         StartCoroutine(recover());
     }
+    IEnumerator hurteffect(float healthp)
+    {
+        hurtstamp = Time.time;
+        health -= healthp;
+        yield return new WaitForSeconds(0.01f);
+        hurt.SetTrigger("hurt");
+        saudio.PlayOneShot(hurtsound);
+    }
     IEnumerator recover()
     {
         fader.SetBool("on", true);
@@ -230,6 +369,7 @@ public class PlayerMovement : MonoBehaviour
         yield return new WaitForSecondsRealtime(1.7f);
         Time.timeScale = 1;
         rb.velocity = Vector3.zero;
+        spawnpos = GameObject.Find("SpawnPos" + spawn.ToString()).transform;
         transform.position = spawnpos.position;
         fader.SetBool("on", false);
         yield return new WaitForSecondsRealtime(0.5f);
@@ -258,3 +398,4 @@ public class PlayerMovement : MonoBehaviour
         enableMovement = false;
     }
 }
+    

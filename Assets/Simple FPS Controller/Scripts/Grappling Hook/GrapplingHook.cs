@@ -13,6 +13,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 using UnityEngine.Rendering.PostProcessing;
 
 [RequireComponent(typeof(PlayerMovement))] // PlayerMovement also requires Rigidbody
@@ -35,8 +36,18 @@ public class GrapplingHook : MonoBehaviour
     public FPSCamera aim;
     private bool mdown = false;
     private bool omdown;
+    private bool rdown = false;
+    private bool ordown;
     public float aimassistbounds = 5;
     public float aimassiststrength = 2;
+    public float aimdist = 40;
+    public bool scube = false;
+    float coyote;
+    public Animator grapanim;
+    public Animator swordanim;
+    private float switchstamp;
+    public AudioSource swordaudio;
+    public AudioClip[] swings;
     private void Start()
     {
         audio = GetComponent<AudioSource>();
@@ -44,6 +55,15 @@ public class GrapplingHook : MonoBehaviour
         pm = this.GetComponent<PlayerMovement>();
         rb = this.GetComponent<Rigidbody>();
         aim.aimstrength = aimassiststrength;
+        switch (selectedweapon)
+        {
+            case 0:
+                grapanim.SetBool("vis", true);
+                break;
+            case 1:
+                swordanim.SetBool("vis", true);
+                break;
+        }
     }
 
     private bool isGrappling = false;
@@ -80,17 +100,33 @@ public class GrapplingHook : MonoBehaviour
                         goto _out;
                     }
                 }
-                if (Physics.SphereCast(FPSCamera.cam.transform.position, aimassistbounds, FPSCamera.cam.transform.forward, out hitInfo, maxGrappleDistance *2, layerMask))
+                if (Physics.SphereCast(FPSCamera.cam.transform.position, aimassistbounds, FPSCamera.cam.transform.forward, out hitInfo, maxGrappleDistance , layerMask))
                 {
-                    aim.aimassist = true;
+                    if (!scube)
+                    {
+                        coyote = Time.time + 0.25f;
+                        //aim.quicklook(Quaternion.LookRotation(hitInfo.collider.transform.position - aim.transform.position, Vector3.up));
+                    }
+                    scube = true;
+                    if (hitInfo.distance > aimdist )
+                    {
+                        aim.aimassist = true;
+                    } else
+                    {
+                        aim.aimassist = false;
+                    }
+                    
                     aim.aimer = Quaternion.LookRotation(hitInfo.point - transform.position);
 
                 } else
                 {
+                    scube = false;
                     aim.aimassist = false;
+
                 }
 
             _else:
+               
                 if (showicon)
                 {
                     crossHairSpinningPart.gameObject.SetActive(true);
@@ -129,8 +165,17 @@ public class GrapplingHook : MonoBehaviour
 
                 return;
             }
-        } else
+        } else if (weapstate > 1 && selectedweapon == 1)
         {
+            if (mdown && !omdown && !showicon)
+            {
+                swordaudio.PlayOneShot(swings[Random.Range(0, swings.Length)]);
+                swordanim.SetTrigger("swing");
+            }
+            swordanim.SetBool("block", rdown);
+            
+        } 
+        
             if (showicon)
             {
                 crossHairSpinningPart.gameObject.SetActive(true);
@@ -140,13 +185,18 @@ public class GrapplingHook : MonoBehaviour
             {
                 crossHairSpinningPart.gameObject.SetActive(false);
             }
-        }
+        
         omdown = mdown;
+        ordown = rdown;
     }
 
     public void OnVerbA(InputValue val)
     {
         mdown = val.isPressed;
+    }
+    public void OnVerbB(InputValue val)
+    {
+        rdown = val.isPressed;
     }
     [Header("Properties")]
     public float maxGrappleDistance = 100.0f;
@@ -216,6 +266,43 @@ public class GrapplingHook : MonoBehaviour
         
         rb.useGravity = true;
         isGrappling = false;
+    }
+    public void OnSwitchweapon(InputValue val)
+    {
+        if (switchstamp < Time.time)
+        {
+            if (val.Get<float>() > 0)
+            {
+                selectedweapon += 1;
+                if (selectedweapon > weapstate - 1)
+                {
+                    selectedweapon = 0;
+                }
+            }
+            else
+            {
+                selectedweapon -= 1;
+                if (selectedweapon < 0)
+                {
+                    selectedweapon = weapstate - 1;
+                }
+            }
+            if (true)
+            {
+                switch (selectedweapon)
+                {
+                    case 0:
+                        grapanim.SetBool("vis", true);
+                        swordanim.SetBool("vis", false);
+                        break;
+                    case 1:
+                        grapanim.SetBool("vis", false);
+                        swordanim.SetBool("vis", true);
+                        break;
+                }
+            }
+            switchstamp = Time.time + 0.24f;
+        }
     }
 
     private void UnblockGrapple()

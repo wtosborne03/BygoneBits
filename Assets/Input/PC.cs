@@ -57,6 +57,14 @@ public class @PC : IInputActionCollection, IDisposable
                     ""expectedControlType"": ""Button"",
                     ""processors"": """",
                     ""interactions"": ""Press(behavior=2)""
+                },
+                {
+                    ""name"": ""switchweapon"",
+                    ""type"": ""Value"",
+                    ""id"": ""2b367fee-bb83-46cf-9017-7ec1d84a6935"",
+                    ""expectedControlType"": ""Axis"",
+                    ""processors"": """",
+                    ""interactions"": """"
                 }
             ],
             ""bindings"": [
@@ -213,6 +221,17 @@ public class @PC : IInputActionCollection, IDisposable
                     ""action"": ""Look"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""bb3154fb-fc32-4478-baf8-2a791704bc81"",
+                    ""path"": """",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""switchweapon"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -254,6 +273,7 @@ public class @PC : IInputActionCollection, IDisposable
         m_Controls_VerbA = m_Controls.FindAction("VerbA", throwIfNotFound: true);
         m_Controls_Jump = m_Controls.FindAction("Jump", throwIfNotFound: true);
         m_Controls_Sprint = m_Controls.FindAction("Sprint", throwIfNotFound: true);
+        m_Controls_switchweapon = m_Controls.FindAction("switchweapon", throwIfNotFound: true);
     }
 
     public void Dispose()
@@ -308,6 +328,7 @@ public class @PC : IInputActionCollection, IDisposable
     private readonly InputAction m_Controls_VerbA;
     private readonly InputAction m_Controls_Jump;
     private readonly InputAction m_Controls_Sprint;
+    private readonly InputAction m_Controls_switchweapon;
     public struct ControlsActions
     {
         private @PC m_Wrapper;
@@ -317,6 +338,7 @@ public class @PC : IInputActionCollection, IDisposable
         public InputAction @VerbA => m_Wrapper.m_Controls_VerbA;
         public InputAction @Jump => m_Wrapper.m_Controls_Jump;
         public InputAction @Sprint => m_Wrapper.m_Controls_Sprint;
+        public InputAction @switchweapon => m_Wrapper.m_Controls_switchweapon;
         public InputActionMap Get() { return m_Wrapper.m_Controls; }
         public void Enable() { Get().Enable(); }
         public void Disable() { Get().Disable(); }
@@ -341,6 +363,9 @@ public class @PC : IInputActionCollection, IDisposable
                 @Sprint.started -= m_Wrapper.m_ControlsActionsCallbackInterface.OnSprint;
                 @Sprint.performed -= m_Wrapper.m_ControlsActionsCallbackInterface.OnSprint;
                 @Sprint.canceled -= m_Wrapper.m_ControlsActionsCallbackInterface.OnSprint;
+                @switchweapon.started -= m_Wrapper.m_ControlsActionsCallbackInterface.OnSwitchweapon;
+                @switchweapon.performed -= m_Wrapper.m_ControlsActionsCallbackInterface.OnSwitchweapon;
+                @switchweapon.canceled -= m_Wrapper.m_ControlsActionsCallbackInterface.OnSwitchweapon;
             }
             m_Wrapper.m_ControlsActionsCallbackInterface = instance;
             if (instance != null)
@@ -360,6 +385,9 @@ public class @PC : IInputActionCollection, IDisposable
                 @Sprint.started += instance.OnSprint;
                 @Sprint.performed += instance.OnSprint;
                 @Sprint.canceled += instance.OnSprint;
+                @switchweapon.started += instance.OnSwitchweapon;
+                @switchweapon.performed += instance.OnSwitchweapon;
+                @switchweapon.canceled += instance.OnSwitchweapon;
             }
         }
     }
@@ -389,5 +417,6 @@ public class @PC : IInputActionCollection, IDisposable
         void OnVerbA(InputAction.CallbackContext context);
         void OnJump(InputAction.CallbackContext context);
         void OnSprint(InputAction.CallbackContext context);
+        void OnSwitchweapon(InputAction.CallbackContext context);
     }
 }

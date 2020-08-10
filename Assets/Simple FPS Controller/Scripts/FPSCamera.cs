@@ -27,6 +27,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 using UnityEngine.InputSystem.Users;
 
 [RequireComponent(typeof(Camera))]
@@ -35,7 +36,7 @@ public class FPSCamera : MonoBehaviour
     public static FPSCamera cam;
     private Camera cam_;
 
-        public AudioSource outMus;
+    AudioSource outMus;
     public float sensitivity = 3;
     [HideInInspector]
     public float mouseX, mouseY;
@@ -61,7 +62,7 @@ public class FPSCamera : MonoBehaviour
     {
         //pin.onControlsChanged += cgontrols;
         InputUser.onChange += cgontrols;
-        
+        SceneManager.activeSceneChanged += onNewLevel;
         st = smoothtime;
         cam = this;
         cam_ = this.GetComponent<Camera>();
@@ -101,6 +102,19 @@ public class FPSCamera : MonoBehaviour
            //_rotation = Vector2.zero;
             transform.position = CameraPosition.position;
         }
+    }
+    public void onNewLevel(Scene current, Scene next)
+    {
+        outMus = GameObject.Find("outside").GetComponent<AudioSource>();
+    }
+    public void quicklook(Quaternion rot)
+    {
+        Vector3 angles = rot.eulerAngles;
+        print(transform.localRotation.eulerAngles);
+        print(angles);
+        rotX = angles.y;
+        rotY = angles.x;
+        rotZ = 0;
     }
     public void cgontrols(InputUser u, InputUserChange c, InputDevice d)
     {

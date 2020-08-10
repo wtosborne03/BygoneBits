@@ -32,14 +32,19 @@ public class screener : MonoBehaviour
         StartCoroutine(CGFade.FadeOut(fg, 0.2f));
         yield return new WaitForSeconds(delay);
         Time.timeScale = 0;
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
         am.SetFloat("musVol", -80);
         screen.gameObject.GetComponent<Animator>().SetBool("on", true);
         yield return new WaitForSecondsRealtime(3);
         contbutton.interactable = true;
+        
         EventSystem.current.SetSelectedGameObject(contbutton.gameObject);
         
         buttonbool = false;
         while (!buttonbool) yield return null;
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
         contbutton.interactable = false;
         Time.timeScale = 1;
         am.SetFloat("musVol", 0);

@@ -87,6 +87,7 @@ public class GrabIt : MonoBehaviour {
 		float actionstamp;
 		private bool mdown = false;
 		private bool omdown;
+		public PlayerMovement pm;
 
 	
 
@@ -140,17 +141,7 @@ public class GrabIt : MonoBehaviour {
 						}
 					}
 							break;
-						case 11:
-							if (remote)
-							{
-								remoteIcon.SetBool("on", true);
-								grapple.showicon = true;
-								if ((mdown && !omdown))
-								{
-									hitInfo.collider.gameObject.BroadcastMessage("click");
-								}
-							}
-							break;
+						
 						case 12:
 						
 							grapple.showicon = true;
@@ -167,7 +158,20 @@ public class GrabIt : MonoBehaviour {
 							if ((mdown && !omdown) && actionstamp < Time.time)
 							{
 								actionstamp = Time.time + 5;
+								pm.spawn = int.Parse(hitInfo.collider.gameObject.name.Substring(4, 1));
 								GameObject.Find("Level").GetComponent<Saver>().save();
+							}
+							break;
+						case 15:
+							grapple.showicon = true;
+							if ((mdown && !omdown))
+							{
+								switch (hitInfo.collider.gameObject.tag)
+                                {
+									case "button":
+										hitInfo.collider.gameObject.GetComponent<physbutton>().press();
+										break;
+                                }
 							}
 							break;
 					}
